@@ -1,21 +1,27 @@
 #include "MeshUtils.hpp"
 
+#include <iomanip>
+
 template <typename T>
 void logMatrix(const std::vector<std::vector<T>>& mat) {
-    for (std::size_t i=0; i<mat[0].size();i++){
-        std::cout<<"--";
+    for (std::size_t i = 0; i < mat[0].size(); i++) {
+        std::cout << "--";
     }
-    std::cout<<"-> (axe des t)"<<std::endl;
+    std::cout << "-> (axe des t)" << std::endl;
+
     for (const auto& row : mat) {
         std::cout << "| ";
         for (const auto& e : row) {
-            std::cout <<e << " ";
+            if constexpr (std::is_same_v<T, double>) {
+                std::cout << std::fixed << std::setprecision(3) << e << " ";
+            } else {
+                std::cout << e << " ";
+            }
         }
-        
         std::cout << '\n';
     }
-    std::cout<<"v (axe des x)";
-    std::cout<< "\n"<<std::endl;
+
+    std::cout << "v (axe des x)" << std::endl;
 }
 
 BoundaryConditions::BoundaryConditions(const std::vector<std::vector<bool>>& contour, const std::function<double(double, double)>& function)
@@ -63,16 +69,18 @@ double SpaceTimeMesh::get_T() const {
 double SpaceTimeMesh::get_R() const {
     return R;
 }
-double SpaceTimeMesh::get_dx() const{
-    return R/(N-1);
+double SpaceTimeMesh::get_dx() const{ // good
+    return 2*R/(N-1);
 }
 double SpaceTimeMesh::get_dt() const{
     return T/(N_T-1);
 }
 std::pair<double, double> SpaceTimeMesh::getCoords(size_t i, size_t n) const {
+    assert (i<N);
+    assert(n<N_T);
     return {
-        x0 + R * (static_cast<int>(i) - static_cast<int>(N) / 2) / static_cast<double>(N - 1),
-        (static_cast<double>(n) / (N_T - 1)) * T
+        x0 - R + 2*R * (static_cast<int>(i)) / static_cast<double>(N - 1), // good
+        (static_cast<double>(n) / (N_T - 1)) * T // good
     };
 }
 
@@ -85,7 +93,7 @@ void FunctionMesh::applyBoundaryConditions(const BoundaryConditions& bc){
         for (int y = 0; y < mesh_data[0].size(); y++) {
             if (bc.check(x, y)) {
                 std::pair<double, double> coords = spaceTimeMesh.getCoords(x, y);
-                mesh_data[x][y] = bc.apply(coords.first, coords.second);
+                mesh_data[x][y] = bc.apply(coords.second, coords.first); // attention f(t,x) not f(x,t) 
             }
         }
     }

@@ -3,7 +3,7 @@
 #include "MeshUtils.hpp"
 
 double norm_cdf(double x);
-
+std::pair<long double,long double> solve_Mx_b(long double& A, long double& B, long double& C, long double& D, long double& E, long double& F);
 class DiscretePricer {
 private:
     int N;
@@ -12,7 +12,7 @@ private:
     const Contract& contract;
     const BoundaryConditions& volBC;
     const BoundaryConditions& rateBC;
-    const BoundaryConditions& additionalBC;
+    
     double current_theta;
     ItoProcess volApprox;
     ItoProcess rateApprox;
@@ -20,6 +20,7 @@ private:
     FunctionMesh contractPrices;
 
 public:
+    const BoundaryConditions& additionalBC;
     DiscretePricer(int N, int N_T, const Contract& contract, double sigma_0, const BoundaryConditions& volBC,
                    const BoundaryConditions& driftBC, const BoundaryConditions& additionalBC, const SpaceTimeMesh& stm);
 
@@ -30,7 +31,7 @@ public:
     double delta();
     double gamma();
     double theta();
-    double vega(double d_sigma = 10.0e-4);
+    double vega(double d_sigma =10e-3);
     void logMesh();
 };
 

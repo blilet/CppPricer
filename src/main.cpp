@@ -1,8 +1,10 @@
 #include <iostream>
+#include <algorithm>
 #include "ItoProcess.hpp"
 #include "Asset.hpp"
 #include "Pricers.hpp"
 int main(int argc, const char * argv[]) {
+    
     
     // Example file (replace main) for pricing european calls and comparing with BS closed form model
     // For simplicty's sake, and for a fair comparaison, we assume constant rate/vol
@@ -20,23 +22,23 @@ int main(int argc, const char * argv[]) {
     ItoDynamics  rateDynamics(rateDrift, rateStochastic);
     
     
-    // init of underlying (we take AAPL as an example)
-    double S0 = 250;
+    // init of underlying
+    double S0 = 200;
     Asset underlying(S0, volDynamics,rateDynamics); // cste dynamics
 
     
     // init of a contract (European Call for example)
     int K = 250;
-    double T = 31; // month contract
-    std::function<double(double)> payoff = [&K](double S) { return std::abs(static_cast<int>(S>=K)* (S-K)); }; // european call payoff
+    double T = 1; // month contract
+    std::function<double(double)> payoff = [&K](double S) { return std::max(S-K,0.); }; // european call payoff
     Contract contract(underlying, payoff, T);
     
     // pricing and creating mesh
     
-    int N = 101; //nbr of steps in x
-    int N_T = 31; //nbr of steps in t (we take as delta T = 1 day)
-    double sigma_0 = 0.19; // cste vol sigma_0
-    double r_0 = 0.05; // cste risk-free rate
+    int N = 1001; //nbr of steps in x
+    int N_T = 1000; //nbr of steps in t (we take as delta T = 1 day)
+    double sigma_0 = .05; // cste vol sigma_0
+    double r_0 = 0.2; // cste risk-free rate
     
     // defining vol and rate boundary conditions (in this case we suppose sigma(0,.) as well as r(0,.) are given and are constant)
     std::function<double(double, double)> csteVol = [&sigma_0](double t, double x) { return sigma_0; };
@@ -46,25 +48,41 @@ int main(int argc, const char * argv[]) {
     BoundaryConditions rateBoundaries(N, N_T, csteRate);
     volBoundaries.ToggleDir(true, false); // this is the section t = 0 ...
     rateBoundaries.ToggleDir(true, false);
+    // volBoundaries.logMesh();//uncomment to visualize
 
     // defining additional contract boundaries (not payoff)
-    std::function<double(double, double)> zeroPayoff= [](double t, double x) { return 0; };
-    BoundaryConditions contractAdditionalBoundaries(N,N_T, zeroPayoff);
+    std::function<double(double, double)> zeroPayoff= [&T](double t, double x) { return 0; };
+    std::function<double(double, double)> bsBoundaries= [&](double t, double x) {
+        BlackScholesCallPricer bsP(std::exp(x), K, T-t, r_0, sigma_0);
+        bsP.price();
+        return bsP.getPrice();
+    };
+    BoundaryConditions contractAdditionalBoundaries(N,N_T, bsBoundaries);
     contractAdditionalBoundaries.ToggleDir(false, false);
+    // contractAdditionalBoundaries.logMesh(); // f_0 uncomment to log
     
     // init mesh
     SpaceTimeMesh stm(std::log(contract.getUnderlying().getS0()), 5*sigma_0 * std::sqrt(contract.getMaturity()), contract.getMaturity(), N, N_T);
-    
     // init pricer
+    std::cout << "dx: " <<stm.get_dx()<<std::endl;
+    std::cout << "dt: " <<stm.get_dt()<<std::endl;
+
+    
+
+    for (int i =0; i<10; i++){
+        DiscretePricer pricer(N, N_T, contract, sigma_0, volBoundaries, rateBoundaries, contractAdditionalBoundaries,stm);
+        pricer.price(static_cast<double>(i)/10);
+        std::cout << "Crank-Nicholson Scheme's price for theta = " <<static_cast<double>(i)/10<<" : "<< pricer.getPrice()<<std::endl;
+    }
+    std::cout <<std::endl;
     DiscretePricer pricer(N, N_T, contract, sigma_0, volBoundaries, rateBoundaries, contractAdditionalBoundaries,stm);
     pricer.price(0.5);
     //pricer.logMesh();  //uncomment to visualize the pricer mesh
-    
-    std::cout << "Crank-Nicholson Scheme's price: "<< pricer.getPrice()<<std::endl;
-    std::cout << "Crank-Nicholson Scheme's delta: "<< pricer.delta()<<std::endl;
-    std::cout << "Crank-Nicholson Scheme's gamma: "<< pricer.gamma()<<std::endl;
-    std::cout << "Crank-Nicholson Scheme's theta: "<< pricer.theta()<<std::endl;
-    std::cout << "Crank-Nicholson Scheme's vega: "<< pricer.vega()<<std::endl;
+    std::cout << "Crank-Nicholson Scheme's price for theta = 0.5 : "<< pricer.getPrice()<<std::endl;
+    std::cout << "Crank-Nicholson Scheme's delta for theta = 0.5 : "<< pricer.delta()<<std::endl;
+    std::cout << "Crank-Nicholson Scheme's gamma  for theta = 0.5 : "<< pricer.gamma()<<std::endl;
+    std::cout << "Crank-Nicholson Scheme's theta for theta (scheme) = 0.5 : "<< pricer.theta()<<std::endl;
+    std::cout << "Crank-Nicholson Scheme's vega for theta = 0.5 : "<< pricer.vega()<<std::endl;
     std::cout<<std::endl;
     
     // compare w/ BlackScholes

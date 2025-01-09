@@ -7,7 +7,6 @@
 #include <utility>
 
 class ItoDynamics {
-
 private:
     const std::function<double(double, double, double)> partial_t;
     const std::function<double(double, double, double)> partial_x;

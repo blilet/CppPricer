@@ -11,14 +11,14 @@ void logMatrix(const std::vector<std::vector<T>>& mat);
 class BoundaryConditions {
 private:
     // frontier_function is copied for stability
-    std::vector<std::vector<bool>> frontier; // all vector matrices can be changed with one continuous vector (but for readability sake we opt for this approach)
-    std::function<double(double, double)> frontier_function;
+    std::vector<std::vector<bool>> frontier; // all vector matrices can be replaced with one continuous vector (but for readability sake we opt for this approach)
+    const std::function<double(double, double)>& frontier_function;
 	
 public:
     BoundaryConditions(const std::vector<std::vector<bool>>& contour, const std::function<double(double, double)>& function);
     BoundaryConditions(std::size_t X, std::size_t Y, const std::function<double(double, double)>& function);
     BoundaryConditions(const BoundaryConditions& other, const std::function<double(double, double)>& new_function); // necessary for vega calculus
-    double apply(double x, double y) const;
+    double apply(double x, double y) const; // basically frontier_function(x,y);
     bool check(std::size_t x, std::size_t y) const;
     void uncheck(std::size_t x, std::size_t y);
     void ToggleDir(bool dir, bool pos);
