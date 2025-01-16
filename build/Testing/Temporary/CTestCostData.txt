@@ -1,6 +1,0 @@
-testBoundaryConditions 1 0.17566
-testFuncMesh 1 0.180765
-testItoDynamics 1 0.168712
-testItoProcess 1 0.178963
-testSpaceTimeMesh 1 0.176958
----
